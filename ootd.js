@@ -1,97 +1,101 @@
-// L'interface qui permet d'ajouter les vetements de l'armoire de l'user de façon manuel
-console.log("oui");
-
-import React from 'react';
+// L'interface qui permet d'ajouter les vêtements de l'armoire de l'utilisateur de façon manuelle
+import React, { useState, useRef } from 'react';
+import { View, Button, Alert, TextInput, Text, StyleSheet } from 'react-native';
 import RNFS from 'react-native-fs';
-import { View, Button, Alert, TextInput , Text, StyleSheet } from 'react-native'; //textInput= saisie de text, Text=affiche le text
-const App () => {
-  //Authetification
+import { initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
+import { getDatabase } from 'firebase/database';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyDAA1i7B37UQG5DBinRu_wWeGeh9nEiUB0",
+  authDomain: "ootd-b9ba9.firebaseapp.com",
+  databaseURL: "https://ootd-b9ba9-default-rtdb.firebaseio.com",
+  projectId: "ootd-b9ba9",
+  storageBucket: "ootd-b9ba9.firebasestorage.app",
+  messagingSenderId: "966998204208",
+  appId: "1:966998204208:web:0570c715a2aac8aa0372f5",
+  measurementId: "G-VQP45EZNS9"
+};
+
+const App = () => {
+  // Initialisation Firebase
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
-  const bd=getDatabase(app);
-
-  const [email,SetEmail]=useState('');
-  const [password,SetPassword]=useState('');
-
-  const formRef = useRef(null);
+  const db = getDatabase(app);
 
   createUserWithEmailAndPassword(auth, email, password)
+  .then((userCredential) => { 
+    const user = userCredential.user;
+    // ...
+  })
+  .catch((error) => {
+    const errorCode = error.code;
+    const errorMessage = error.message;
+    // ..
+  });
+
+//connexion utilisateur
+  signInWithEmailAndPassword(auth, email, password)
     .then((userCredential) => {
-      // Signed up 
+      // Signed in 
       const user = userCredential.user;
       // ...
     })
     .catch((error) => {
       const errorCode = error.code;
       const errorMessage = error.message;
-      // ..
     });
-  
-  //connexion utilisateur
-  signInWithEmailAndPassword(auth, email, password)
-      .then((userCredential) => {
-        // Signed in 
-        const user = userCredential.user;
-        // ...
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-      });
-  
 
+  // États pour l'authentification
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
-  const [formulaire, MAJFormulaire] = React.useState({ //useState creer un tableau avec l'etat de base de la variable ici formulaire, la maj qui permet 
+  // États pour les formulaires
+  const [formulaire, setFormulaire] = useState({
     bas: '',
     haut: '',
     accessoires: '',
   });
-  
-  const ModifChamp = (field, value) => { // la fonction met à jour le formulaire qd il y aune modif
-    MAJFormulaire({ ...formulaire, [field]: value });
-  };
 
-  const [formulaire2,MAJFormulaire2]= React.useState({
-    matiere:'',
-    taille:'',
-    couleur:'',
+  const [formulaire2, setFormulaire2] = useState({
+    matiere: '',
+    taille: '',
+    couleur: '',
   });
 
-  const ModifChamp2= (field,value) =>{
-    MAJFormulaire2({...formulaire2,[field]:value})
+  const modifChamp = (field, value) => {
+    setFormulaire({ ...formulaire, [field]: value });
   };
 
-  const SoumissionFormulaire = () => {
-    console.log(formulaire,formulaire2);
-    Alert.alert("Données soumises", JSON.stringify(formulaire,formulaire2));
+  const modifChamp2 = (field, value) => {
+    setFormulaire2({ ...formulaire2, [field]: value });
   };
 
-  const CheminAcces='${RNFS.DocumentDirectoryPath}/BD_Users.json';
-  const fs= require("fs"); // c'est un module de node qui permet de lire/ecrire dans un fichier
+  const soumissionFormulaire = () => {
+    console.log(formulaire, formulaire2);
+    Alert.alert('Données soumises', JSON.stringify({ formulaire, formulaire2 }));
+  };
 
-  const connexionBD= async ()=> { 
-    try{
-      CheminAcces;
-      await RNFS.writeFile(filePath, JSON.stringify(data, null, 2), 'utf8');
-      console.log('Données sauvegardées dans :', filePath);
-    }   catch (error) {
+  const cheminAcces = `${RNFS.DocumentDirectoryPath}/BD_Users.json`;
+
+  const addDataToFile = async (data) => {
+    try {
+      await RNFS.writeFile(cheminAcces, JSON.stringify(data, null, 2), 'utf8');
+      console.log('Données sauvegardées dans :', cheminAcces);
+    } catch (error) {
       console.error('Erreur lors de la sauvegarde des données :', error);
     }
   };
+
   const readDataFromFile = async () => {
     try {
-      const filePath = `${RNFS.DocumentDirectoryPath}/BD_Users.json`;
-  
-      // Vérifier si le fichier existe
-      const fileExists = await RNFS.exists(filePath);
-  
+      const fileExists = await RNFS.exists(cheminAcces);
       if (!fileExists) {
-        console.log('Le fichier n\'existe pas.');
+        console.log("Le fichier n'existe pas.");
         return;
       }
-  
-      // Lire le contenu du fichier
-      const content = await RNFS.readFile(filePath, 'utf8');
+
+      const content = await RNFS.readFile(cheminAcces, 'utf8');
       const jsonData = JSON.parse(content);
       console.log('Données lues :', jsonData);
     } catch (error) {
@@ -99,12 +103,10 @@ const App () => {
     }
   };
 
-
-
-  return ( // l'interface de l'user
-    <View style={styles.container}> //applique les styles definis dans l'interface
+  return (
+    <View style={styles.container}>
       <Button
-        onPress={() => Alert.alert('Accès à l’armoire')}
+        onPress={() => Alert.alert("Accès à l'armoire")}
         title="Armoire"
         color="black"
         accessibilityLabel="Bouton permettant l'accès à l'armoire"
@@ -113,23 +115,28 @@ const App () => {
       <TextInput
         style={styles.input}
         placeholder="Entrez un bas"
-        onChangeText={(value) => ModifChamp('bas', value)}
+        onChangeText={(value) => modifChamp('bas', value)}
       />
       <Text>Haut :</Text>
       <TextInput
         style={styles.input}
         placeholder="Entrez un haut"
-        onChangeText={(value) => ModifChamp('haut', value)}
+        onChangeText={(value) => modifChamp('haut', value)}
       />
       <Text>Accessoires :</Text>
       <TextInput
         style={styles.input}
         placeholder="Entrez des accessoires"
-        onChangeText={(value) => ModifChamp('accessoires', value)}
+        onChangeText={(value) => modifChamp('accessoires', value)}
       />
-      <Button title="Suivant" onPress={SoumissionFormulaire} /> //recup les données
+      <Button title="Soumettre" onPress={soumissionFormulaire} />
       <Button title="Lire les données" onPress={readDataFromFile} />
-      <Button title="Ajouter des données" onPress={() => addDataToFile({ bas: 'Pantalon', haut: 'Pull', accessoires: 'Écharpe' })} /> 
+      <Button
+        title="Ajouter des données"
+        onPress={() =>
+          addDataToFile({ bas: 'Pantalon', haut: 'Pull', accessoires: 'Écharpe' })
+        }
+      />
     </View>
   );
 };
@@ -149,5 +156,6 @@ const styles = StyleSheet.create({
 });
 
 export default App;
+
 
 
